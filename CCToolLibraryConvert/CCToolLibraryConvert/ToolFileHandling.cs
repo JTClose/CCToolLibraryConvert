@@ -9,6 +9,8 @@ using System.Linq.Expressions;
 using System.ComponentModel;
 using System.Security;
 using System.Runtime.Serialization.Formatters.Binary;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 namespace CCToolLibraryConvert
 {
@@ -204,14 +206,16 @@ namespace CCToolLibraryConvert
 
 
     // Open and Save file types    
-    public class CCtoolFileHandling
+    public class ToolFileHandling
     {
         #region F360 Tool File
-        public static bool JsonInputFiles(string inputFileNameStr, out _360LibraryConverter.F360ToolLibrary f360ToolLibrary)
+        public static bool JsonInputFiles(string inputFileNameStr, out _360LibraryConverter.F360ToolLibrary f360ToolLibrary, out JToken nextJsonToken)
         {
             bool successFlag = false;
 
-            var nextF360ToolLibrary = _360LibraryConverter.F360ToolLibrary.FromJson(System.IO.File.ReadAllText(inputFileNameStr));
+            nextJsonToken = JToken.Parse(System.IO.File.ReadAllText(inputFileNameStr));
+
+            dynamic nextF360ToolLibrary = _360LibraryConverter.F360ToolLibrary.FromJson(System.IO.File.ReadAllText(inputFileNameStr));
             if (nextF360ToolLibrary != null)
             {
                 successFlag = true;
@@ -245,11 +249,11 @@ namespace CCToolLibraryConvert
         public const string ccToolCSVHeader = "number,vendor,model,URL,name,type,diameter,cornerradius,flutelength,shaftdiameter,angle,numflutes,stickout,coating,metric,notes,machine,material,plungerate,feedrate,rpm,depth,cutpower,finishallowance,3dstepover,3dfeedrate,3drpm";
 
 
-        public static bool SaveCCToolFile(string fullFilePath, ref CCToolFile saveCCToolFile, out string errMsgStr)
+        public static bool SaveCCToolFile(string fullFilePath, ref NCToolFile saveCCToolFile, out string errMsgStr)
         {
             errMsgStr = string.Empty;
             bool bSuccess = false;
-            if (saveCCToolFile.Tools.Count > 0)
+            if (saveCCToolFile.CCTools.Count > 0)
             {
 
                 try
@@ -300,11 +304,11 @@ namespace CCToolLibraryConvert
         }
 
 
-        public static bool WriteCCToolCSVFile(string outputFileName, CCToolFile cCToolFile, out string errMsgStr)
+        public static bool WriteCCToolCSVFile(string outputFileName, NCToolFile cCToolFile, out string errMsgStr)
         {
             errMsgStr = string.Empty;
             bool bSuccess = false;
-            if (cCToolFile.Tools.Count == 0)
+            if (cCToolFile.CCTools.Count == 0)
             {
                 errMsgStr = "No Tools defined in file " + outputFileName;
                 return (bSuccess);
@@ -314,7 +318,7 @@ namespace CCToolLibraryConvert
             // Add Header record
             sb.Append(ccToolCSVHeader + '\n');
 
-            foreach (CCToolCSV nextToolCSV in cCToolFile.Tools.Values)
+            foreach (CCToolCSV nextToolCSV in cCToolFile.CCTools.Values)
             {
                 sb.Append(nextToolCSV.Number.ToString() + ",");
                 sb.Append(nextToolCSV.Vendor + ",");
@@ -363,11 +367,11 @@ namespace CCToolLibraryConvert
             return (bSuccess);
         }
 
-        public static bool ReadCCToolCSVFile(string inputFileNameStr, out CCToolFile newCCToolFile, out string errMSgStr)
+        public static bool ReadCCToolCSVFile(string inputFileNameStr, out NCToolFile newCCToolFile, out string errMSgStr)
         {
             bool bSuccess = true;
             errMSgStr = string.Empty;
-            newCCToolFile = new CCToolFile();
+            newCCToolFile = new NCToolFile();
 
             string[] dblQuoteArray;
             string[] commaArray;
@@ -428,7 +432,7 @@ namespace CCToolLibraryConvert
                                 j++;
                                 newCCToolFile.ToolIndex++;
                                 newCCTool.ToolIndex = newCCToolFile.ToolIndex.ToString();
-                                newCCToolFile.Tools.Add(newCCTool.ToolIndex, newCCTool);
+                                newCCToolFile.CCTools.Add(newCCTool.ToolIndex, newCCTool);
                             }
                             else
                             {

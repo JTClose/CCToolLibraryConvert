@@ -1,10 +1,12 @@
-﻿using Microsoft.VisualBasic.ApplicationServices;
+﻿using _360LibraryConverter;
+using Microsoft.VisualBasic.ApplicationServices;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing.Text;
 using System.Linq;
 using System.Reflection;
@@ -95,7 +97,7 @@ namespace CCToolLibraryConvert
 
             this.toolStripStatusLabelSelectCount.Text = "Select count: " + selectCount.ToString();
 
-            this.toolStripStatusLabelClipCount.Text = "Clip count: " + CCToolSession.clipBoardToolFile.Tools.Count.ToString();
+            this.toolStripStatusLabelClipCount.Text = "Clip count: " + CCToolSession.clipBoardToolFile.CCTools.Count.ToString();
 
             if (CCToolSession.curToolFile.FileName != null)
             {
@@ -107,7 +109,7 @@ namespace CCToolLibraryConvert
     
             }
 
-            this.toolStripStatusLabelToolCount.Text = "Tool count: " + CCToolSession.curToolFile.Tools.Count.ToString();
+            this.toolStripStatusLabelToolCount.Text = "Tool count: " + CCToolSession.curToolFile.CCTools.Count.ToString();
             this.toolStripStatusLabelFileCount.Text = "File count: " + CCToolSession.curToolFiles.Count.ToString();
         }
 
@@ -115,7 +117,7 @@ namespace CCToolLibraryConvert
 
         #region ListView
 
-        private void updateCCToolLibraryListView(ref CCToolFile nextCCFile)
+        private void updateCCToolLibraryListView(ref NCToolFile nextCCFile)
         {
             // Load ListView with Dictionary data
             listViewCCToolLibrary.View = System.Windows.Forms.View.Details;
@@ -203,7 +205,7 @@ namespace CCToolLibraryConvert
             ListViewItem.ListViewSubItem CCToolSubItem = new ListViewItem.ListViewSubItem();
 
             // Loop thru each tool instance
-            foreach (CCToolCSV lclCCTool in nextCCFile.Tools.Values)
+            foreach (CCToolCSV lclCCTool in nextCCFile.CCTools.Values)
             {
                 int propIdx = 0;
                 ListViewItem lclToolItem = null;
@@ -544,17 +546,17 @@ namespace CCToolLibraryConvert
 
         #region TabStrip
 
-        private static void updateTabPagesOnSave(out List<CCToolFile> toolFileSuccess, out List<CCToolFile> toolFileError)
+        private static void updateTabPagesOnSave(out List<NCToolFile> toolFileSuccess, out List<NCToolFile> toolFileError)
         {
             bool bSuccess;
             string errMsgStr = string.Empty;
             string caption = string.Empty;
-            toolFileSuccess = new List<CCToolFile>();
-            toolFileSuccess = new List<CCToolFile>();
+            toolFileSuccess = new List<NCToolFile>();
+            toolFileSuccess = new List<NCToolFile>();
             bSuccess = CCToolSession.SaveAllCurToolFiles(out toolFileSuccess, out toolFileError, out errMsgStr);
             if (bSuccess == true)
             {
-                foreach (CCToolFile toolFile in toolFileSuccess)
+                foreach (NCToolFile toolFile in toolFileSuccess)
                 {
                     toolFile.FileTabPage.Text = toolFile.FileName;
                 }
@@ -562,7 +564,7 @@ namespace CCToolLibraryConvert
             }
             else
             {
-                foreach (CCToolFile toolFile in toolFileError)
+                foreach (NCToolFile toolFile in toolFileError)
                 {
                     toolFile.FileTabPage.Text = "!! " + toolFile.FileName;
                 }
@@ -577,6 +579,63 @@ namespace CCToolLibraryConvert
 
         #endregion
 
+        #region TreeView
+        private void updateF360JsonTreeView(JToken root, string rootName, ref TreeView lclTreeView)
+        {
+            lclTreeView.BeginUpdate();
+            try
+            {
+                lclTreeView.Nodes.Clear();
+                var tNode = lclTreeView.Nodes[lclTreeView.Nodes.Add(new TreeNode(rootName))];
+                tNode.Tag = root;
 
+                AddJsonTreeNode(root, tNode, ref lclTreeView);
+
+                // Not sure about this next move
+                lclTreeView.ExpandAll();
+            }
+            finally
+            {
+                lclTreeView.EndUpdate();
+            }
+        }
+
+        private void AddJsonTreeNode(JToken token, TreeNode inTreeNode, ref TreeView lclTreeView)
+        {
+            if (token == null)
+                return;
+            if (token is JValue)
+            {
+//                var childNode = inTreeNode.Nodes[inTreeNode.Nodes.Add(new TreeNode(token.ToString()))];
+ //               childNode.Tag = token;
+            }
+            else if (token is JObject)
+            {
+                var obj = (JObject)token;
+                foreach (var property in obj.Properties())
+                {
+                    var childNode = inTreeNode.Nodes[inTreeNode.Nodes.Add(new TreeNode(property.Name))];
+                    childNode.Tag = property;
+                    AddJsonTreeNode(property.Value, childNode, ref lclTreeView);
+                }
+            }
+            else if (token is JArray)
+            {
+                var array = (JArray)token;
+                for (int i = 0; i < array.Count; i++)
+                {
+                    var childNode = inTreeNode.Nodes[inTreeNode.Nodes.Add(new TreeNode(i.ToString()))];
+                    childNode.Tag = array[i];
+                    AddJsonTreeNode(array[i], childNode, ref lclTreeView);
+                }
+            }
+            else
+            {
+                
+                // Debug.WriteLine(string.Format("{0} not implemented", token.Type)); // JConstructor, JRaw
+            }
+        }
+
+        #endregion
     }
 }
