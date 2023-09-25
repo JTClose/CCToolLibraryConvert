@@ -55,6 +55,7 @@
             splitContainerMain = new SplitContainer();
             tabControlCCToolLib = new TabControl();
             tabPage1 = new TabPage();
+            treeViewF360Json = new TreeView();
             listViewCCToolLibrary = new ListView();
             contextMenuStripListView = new ContextMenuStrip(components);
             addRowToolStripMenuItem = new ToolStripMenuItem();
@@ -153,7 +154,7 @@
             // ToolStripMenuItemNew
             // 
             ToolStripMenuItemNew.Name = "ToolStripMenuItemNew";
-            ToolStripMenuItemNew.Size = new Size(146, 22);
+            ToolStripMenuItemNew.Size = new Size(180, 22);
             ToolStripMenuItemNew.Text = "New";
             ToolStripMenuItemNew.Click += ToolStripMenuItemNew_Click;
             // 
@@ -161,21 +162,20 @@
             // 
             toolStripMenuItemOpen.DropDownItems.AddRange(new ToolStripItem[] { cCToolLibraryToolStripMenuItem, f360ToolLibraryToolStripMenuItem, camoticsToolStripMenuItem });
             toolStripMenuItemOpen.Name = "toolStripMenuItemOpen";
-            toolStripMenuItemOpen.Size = new Size(146, 22);
+            toolStripMenuItemOpen.Size = new Size(180, 22);
             toolStripMenuItemOpen.Text = "&Open";
             // 
             // cCToolLibraryToolStripMenuItem
             // 
             cCToolLibraryToolStripMenuItem.Name = "cCToolLibraryToolStripMenuItem";
-            cCToolLibraryToolStripMenuItem.Size = new Size(162, 22);
+            cCToolLibraryToolStripMenuItem.Size = new Size(180, 22);
             cCToolLibraryToolStripMenuItem.Text = "CC Tool Library";
             cCToolLibraryToolStripMenuItem.Click += OpenCCToolLibraryToolStripMenuItem_Click;
             // 
             // f360ToolLibraryToolStripMenuItem
             // 
-            f360ToolLibraryToolStripMenuItem.Enabled = false;
             f360ToolLibraryToolStripMenuItem.Name = "f360ToolLibraryToolStripMenuItem";
-            f360ToolLibraryToolStripMenuItem.Size = new Size(162, 22);
+            f360ToolLibraryToolStripMenuItem.Size = new Size(180, 22);
             f360ToolLibraryToolStripMenuItem.Text = "F360 Tool Library";
             f360ToolLibraryToolStripMenuItem.Click += OpenF360ToolLibraryToolStripMenuItem_Click;
             // 
@@ -183,7 +183,7 @@
             // 
             camoticsToolStripMenuItem.Enabled = false;
             camoticsToolStripMenuItem.Name = "camoticsToolStripMenuItem";
-            camoticsToolStripMenuItem.Size = new Size(162, 22);
+            camoticsToolStripMenuItem.Size = new Size(180, 22);
             camoticsToolStripMenuItem.Text = "Camotics";
             camoticsToolStripMenuItem.Click += camoticsToolStripMenuItem_Click;
             // 
@@ -191,7 +191,7 @@
             // 
             ToolStripMenuItemSave.DropDownItems.AddRange(new ToolStripItem[] { toolStripMenuItemSaveCurrent, toolStripMenuItemSaveAllChgs });
             ToolStripMenuItemSave.Name = "ToolStripMenuItemSave";
-            ToolStripMenuItemSave.Size = new Size(146, 22);
+            ToolStripMenuItemSave.Size = new Size(180, 22);
             ToolStripMenuItemSave.Text = "&Save";
             // 
             // toolStripMenuItemSaveCurrent
@@ -211,14 +211,14 @@
             // ToolStripMenuItemClose
             // 
             ToolStripMenuItemClose.Name = "ToolStripMenuItemClose";
-            ToolStripMenuItemClose.Size = new Size(146, 22);
+            ToolStripMenuItemClose.Size = new Size(180, 22);
             ToolStripMenuItemClose.Text = "&Close All Files";
             ToolStripMenuItemClose.Click += ToolStripMenuItemClose_Click;
             // 
             // ToolStripMenuItemExit
             // 
             ToolStripMenuItemExit.Name = "ToolStripMenuItemExit";
-            ToolStripMenuItemExit.Size = new Size(146, 22);
+            ToolStripMenuItemExit.Size = new Size(180, 22);
             ToolStripMenuItemExit.Text = "&Exit";
             ToolStripMenuItemExit.Click += ToolStripMenuItemExit_Click;
             // 
@@ -288,6 +288,7 @@
             // 
             // tabPage1
             // 
+            tabPage1.Controls.Add(treeViewF360Json);
             tabPage1.Controls.Add(listViewCCToolLibrary);
             tabPage1.Location = new Point(4, 26);
             tabPage1.Name = "tabPage1";
@@ -296,13 +297,20 @@
             tabPage1.Text = "tabPage1";
             tabPage1.UseVisualStyleBackColor = true;
             // 
+            // treeViewF360Json
+            // 
+            treeViewF360Json.Location = new Point(33, 38);
+            treeViewF360Json.Name = "treeViewF360Json";
+            treeViewF360Json.Size = new Size(121, 261);
+            treeViewF360Json.TabIndex = 1;
+            treeViewF360Json.AfterSelect += treeViewF360Json_AfterSelect;
+            // 
             // listViewCCToolLibrary
             // 
             listViewCCToolLibrary.ContextMenuStrip = contextMenuStripListView;
-            listViewCCToolLibrary.Dock = DockStyle.Fill;
-            listViewCCToolLibrary.Location = new Point(0, 0);
+            listViewCCToolLibrary.Location = new Point(173, 30);
             listViewCCToolLibrary.Name = "listViewCCToolLibrary";
-            listViewCCToolLibrary.Size = new Size(392, 372);
+            listViewCCToolLibrary.Size = new Size(219, 342);
             listViewCCToolLibrary.TabIndex = 0;
             listViewCCToolLibrary.UseCompatibleStateImageBehavior = false;
             listViewCCToolLibrary.ColumnClick += listViewCCToolLibrary_ColumnClick_1;
@@ -498,5 +506,6 @@
         private TabPage tabPage1;
         private ListView listViewCCToolLibrary;
         private ToolStripStatusLabel toolStripStatusLabelFileCount;
+        private TreeView treeViewF360Json;
     }
 }

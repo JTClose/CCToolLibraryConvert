@@ -13,11 +13,11 @@ namespace CCToolLibraryConvert
     {
         // CC Tools
         // Collection of all current CC Tool CSV files
-        public static Dictionary<string, CCToolFile> curToolFiles = new Dictionary<string, CCToolFile>();
+        public static Dictionary<string, NCToolFile> curToolFiles = new Dictionary<string, NCToolFile>();
         // Current CC Tool file
-        public static CCToolFile curToolFile = new CCToolFile();
+        public static NCToolFile curToolFile = new NCToolFile();
         // Temp CC Tool file for copying and paste
-        public static CCToolFile clipBoardToolFile = new CCToolFile();
+        public static NCToolFile clipBoardToolFile = new NCToolFile();
 
         // Temp Tool instance for PropertyGrid values
         // This should probably be an object to make it generic
@@ -46,7 +46,7 @@ namespace CCToolLibraryConvert
             bool bChangeWarning = false;
             changeCount = 0;
             // Check all files for changes
-            foreach (CCToolFile toolFile in CCToolSession.curToolFiles.Values)
+            foreach (NCToolFile toolFile in CCToolSession.curToolFiles.Values)
             {
                 if (toolFile.bAnyChanges == true)
                 {
@@ -62,26 +62,26 @@ namespace CCToolLibraryConvert
         {
             // Remove all CCToolFiles from Session
             CCToolSession.curToolFiles.Clear();
-            CCToolSession.curToolFile = new CCToolFile();
-            CCToolSession.clipBoardToolFile = new CCToolFile();
+            CCToolSession.curToolFile = new NCToolFile();
+            CCToolSession.clipBoardToolFile = new NCToolFile();
         }
 
-        public static bool SaveAllCurToolFiles(out List<CCToolFile> ccToolFileSuccess, out List<CCToolFile> ccToolFileError, out string allErrMsgStr)
+        public static bool SaveAllCurToolFiles(out List<NCToolFile> ccToolFileSuccess, out List<NCToolFile> ccToolFileError, out string allErrMsgStr)
         {
             bool bExitWarning = false;
             bool bChangeWarning = false;
             bool bSuccess = false;
             string errMsgStr = string.Empty;
             allErrMsgStr = string.Empty;
-            ccToolFileSuccess = new List<CCToolFile>();
-            ccToolFileError = new List<CCToolFile>();
+            ccToolFileSuccess = new List<NCToolFile>();
+            ccToolFileError = new List<NCToolFile>();
 
             // Check all files for changes
-            foreach (CCToolFile toolFile in CCToolSession.curToolFiles.Values)
+            foreach (NCToolFile toolFile in CCToolSession.curToolFiles.Values)
             {
                 if (toolFile.bAnyChanges == true)
                 {
-                    bSuccess = CCtoolFileHandling.SaveCCToolFile(toolFile.FullFilePath, ref CCToolSession.curToolFile, out errMsgStr);
+                    bSuccess = ToolFileHandling.SaveCCToolFile(toolFile.FullFilePath, ref CCToolSession.curToolFile, out errMsgStr);
                     if (bSuccess == false)
                     {
                         allErrMsgStr = string.Concat(allErrMsgStr + "\n", errMsgStr);
@@ -106,29 +106,37 @@ namespace CCToolLibraryConvert
 
         }
 
+        public enum VendorEnum
+        {
+            CarbideCreate,
+            F360
+        }
+
     }
 
     // Wrapper around CC Tool CSV file
-    public class CCToolFile
+    public class NCToolFile
     {
         private string _fileName;
         private string _fullFilePath;
         private bool _bAnyChanges;
-        private string _vendorSystemName;
+        private string _vendorSystem;
         private bool _bNewFile;
         private int _toolIndex;
         private TabPage? _fileTabPage;
 
-        public CCToolFile()
+        public NCToolFile()
         {
             _fileName = string.Empty;
             _fullFilePath = string.Empty;
             _bAnyChanges = false;
             _bNewFile = false;
-            _vendorSystemName = string.Empty;
+            _vendorSystem = string.Empty;
             _fileTabPage = null;
-        // Index is incremented BEFORE inserting.  This gives a 0 based index
-        _toolIndex = -1;
+            // Index is incremented BEFORE inserting.  This gives a 0 based index
+            _toolIndex = -1;
+            CCTools = new Dictionary<string, CCToolCSV>();
+            F360Tools = new _360LibraryConverter.F360ToolLibrary();
         }
 
         public string FullFilePath
@@ -157,10 +165,10 @@ namespace CCToolLibraryConvert
             set { _bNewFile = value; }
         }
 
-        public string VendorSystemName
+        public string VendorSystem
         {
-            get { return _vendorSystemName; }
-            set { _vendorSystemName = value; }
+            get { return _vendorSystem; }
+            set { _vendorSystem = value; }
 
         }
 
@@ -176,7 +184,9 @@ namespace CCToolLibraryConvert
             set { _toolIndex = value; }
         }
 
-        public Dictionary<string, CCToolCSV> Tools = new Dictionary<string, CCToolCSV>();
+        public Dictionary<string, CCToolCSV> CCTools = new Dictionary<string, CCToolCSV>();
+
+        public _360LibraryConverter.F360ToolLibrary F360Tools = new _360LibraryConverter.F360ToolLibrary();
     }
 
 

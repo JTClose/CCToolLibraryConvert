@@ -17,6 +17,8 @@ namespace CCToolLibraryConvert
     using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
     using System.Text;
     using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+    using _360LibraryConverter;
+    using Newtonsoft.Json.Linq;
 
     public partial class mainForm : Form
     {
@@ -110,7 +112,8 @@ namespace CCToolLibraryConvert
             string newKeyName = string.Empty;
             string statusMessage = string.Empty;
 
-            CCToolFile newCCToolFile = new CCToolFile();
+            NCToolFile newCCToolFile = new NCToolFile();
+            newCCToolFile.VendorSystem = CCToolSession.VendorEnum.CarbideCreate.ToString();
             newCCToolFile.bNewFile = true;
 
             CCToolSession.newFileCount++;
@@ -162,9 +165,11 @@ namespace CCToolLibraryConvert
             string pathOnly = string.Empty;
             string message = string.Empty;
             string statusMessage = string.Empty;
+            string oldFileName = string.Empty;
 
             if (CCToolSession.curToolFile.bNewFile)
             {
+                oldFileName = CCToolSession.curToolFile.FullFilePath;
                 // Open dialog to determine new file name
                 using (SaveFileDialog saveFileDialog = new SaveFileDialog())
                 {
@@ -181,12 +186,8 @@ namespace CCToolLibraryConvert
                     {
                         return;
                     }
-
-                    // Remove the new file from the Session dictionary and the Tab
-                    CCToolSession.curToolFiles.Remove(CCToolSession.curToolFile.FullFilePath);
-                    tabControlCCToolLib.TabPages.RemoveByKey(CCToolSession.curToolFile.FullFilePath);
                     curFullFilePath = saveFileDialog.FileName;
-                    CCToolSession.curToolFile.FullFilePath = curFullFilePath;
+
                 }
             }
             else
@@ -196,60 +197,64 @@ namespace CCToolLibraryConvert
 
             pathOnly = Path.GetFullPath(curFullFilePath);
 
-            // Check Dictionary for existing entry
-            if (CCToolSession.curToolFiles.TryGetValue(curFullFilePath, out CCToolFile chkToolFile))
-            {
-
-                // If so, option to Replace or Skip
-                caption = curFullFilePath + " already open";
-                message = "Select Yes to Reload file";
-                var result = MessageBox.Show(message, caption, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                if (result == DialogResult.No)
-                {
-                    // Skip this file
-                    return;
-                }
-                // Remove this file from the Session dictionary and the Tab
-                CCToolSession.curToolFiles.Remove(curFullFilePath);
-                tabControlCCToolLib.TabPages.RemoveByKey(curFullFilePath);
-
-            }
-
             // On Success a new TabPage and item in curToolFile are added
-            bSuccess = CCtoolFileHandling.SaveCCToolFile(curFullFilePath, ref CCToolSession.curToolFile, out errMsgStr);
+            bSuccess = ToolFileHandling.SaveCCToolFile(curFullFilePath, ref CCToolSession.curToolFile, out errMsgStr);
             if (bSuccess == false)
             {
                 caption = "Errors Saving Tool file";
                 var result3 = MessageBox.Show(errMsgStr, caption,
                                              MessageBoxButtons.OK,
                                              MessageBoxIcon.Warning);
+                statusMessage = "Fail to save " + curFullFilePath;
             }
             else
             {
-                CCToolSession.curToolFile.bNewFile = false;
+                CCToolSession.curToolFile.FullFilePath = curFullFilePath;
+
+                if (CCToolSession.curToolFile.bNewFile == true)
+                {
+                    // Remove the new file from the Session dictionary and the Tab
+                    CCToolSession.curToolFiles.Add(curFullFilePath, CCToolSession.curToolFile);
+                    CCToolSession.curToolFiles.Remove(oldFileName);
+
+                    // Remove ListView from Tabpage
+                    this.listViewCCToolLibrary.Parent = null;
+
+
+                    this.tabControlCCToolLib.TabPages.Add(curFullFilePath);
+                    TabPage newTabPage = tabControlCCToolLib.TabPages[tabControlCCToolLib.TabPages.Count - 1];
+                    CCToolSession.curToolFile.FileTabPage = newTabPage;
+                    newTabPage.Tag = CCToolSession.curToolFile;
+
+                    tabControlCCToolLib.TabPages.RemoveByKey(oldFileName);
+                    tabControlCCToolLib.SelectedTab = newTabPage;
+
+                    listViewCCToolLibrary.Parent = newTabPage;
+                    listViewCCToolLibrary.Dock = DockStyle.Fill;
+
+                    CCToolSession.curToolFile.bNewFile = false;
+
+                }
+
+                CCToolSession.curToolFile.FileTabPage.Text = CCToolSession.curToolFile.FileName;
+
                 CCToolSession.curToolFile.bAnyChanges = false;
-
-                CCToolSession.curToolFiles.Add(curFullFilePath, CCToolSession.curToolFile);
-
-                this.tabControlCCToolLib.TabPages.Add(curFullFilePath);
-                TabPage newTabPage = this.tabControlCCToolLib.TabPages[curFullFilePath];
-                newTabPage.Text = CCToolSession.curToolFile.FileName;
-                //                this.tabControlCCToolLib.SelectedTab = newTabPage;
 
                 // Save Path for future use
                 Properties.Settings.Default.LastCsvPath = pathOnly;
+                statusMessage = "Saved " + curFullFilePath;
             }
 
-            statusMessage = "Saved " + curFullFilePath;
             updateStatusStrip(this.listViewCCToolLibrary.SelectedItems.Count, statusMessage);
+
 
         }
         private void ToolStripMenuItemSaveAllChgs_Click(object sender, EventArgs e)
         {
             string statusMessage = string.Empty;
 
-            List<CCToolFile> toolSuccessFile = new List<CCToolFile>();
-            List<CCToolFile> toolErrorFile = new List<CCToolFile>();
+            List<NCToolFile> toolSuccessFile = new List<NCToolFile>();
+            List<NCToolFile> toolErrorFile = new List<NCToolFile>();
 
             updateTabPagesOnSave(out toolSuccessFile, out toolErrorFile);
             statusMessage = "Saved " + toolSuccessFile.Count + " files Successfully and " + toolErrorFile.Count + " with Errors";
@@ -267,8 +272,8 @@ namespace CCToolLibraryConvert
             string message = string.Empty;
             string caption = string.Empty;
             string statusMessage = string.Empty;
-            List<CCToolFile> toolSuccessFile = new List<CCToolFile>();
-            List<CCToolFile> toolErrorFile = new List<CCToolFile>();
+            List<NCToolFile> toolSuccessFile = new List<NCToolFile>();
+            List<NCToolFile> toolErrorFile = new List<NCToolFile>();
 
             allCount = CCToolSession.curToolFiles.Count;
 
@@ -318,8 +323,8 @@ namespace CCToolLibraryConvert
             string message = string.Empty;
             string caption = string.Empty;
             string statusMessage = string.Empty;
-            List<CCToolFile> toolSuccessFile = new List<CCToolFile>();
-            List<CCToolFile> toolErrorFile = new List<CCToolFile>();
+            List<NCToolFile> toolSuccessFile = new List<NCToolFile>();
+            List<NCToolFile> toolErrorFile = new List<NCToolFile>();
 
             bChangesFlag = CCToolSession.CheckChangesCurToolFiles(out changeCount);
             if (bChangesFlag)
@@ -394,16 +399,18 @@ namespace CCToolLibraryConvert
 
         private void OpenF360ToolLibraryToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // Open selected file(s)
-
-            var fileContent = string.Empty;
-            var filePath = string.Empty;
+            bool bSuccess = false;
+            bool bAnySuccess = false;
+            TabPage curTabPage = new TabPage();
+            string statusMessage = string.Empty;
+            int successCount = 0;
+            int errorCount = 0;
+            JToken nextF360Token = null;
 
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
-                openFileDialog.InitialDirectory = "d:\\";
+                openFileDialog.InitialDirectory = Properties.Settings.Default.LastCsvPath;
                 openFileDialog.Filter = "Fusion Tool Library (*.json)|*.json";
-                //openFileDialog.FilterIndex = 2;
                 openFileDialog.RestoreDirectory = true;
                 openFileDialog.Multiselect = true;
                 openFileDialog.Title = "Import Fusion Tool Library(s)";
@@ -412,26 +419,90 @@ namespace CCToolLibraryConvert
                 if (dr == System.Windows.Forms.DialogResult.OK)
                 {
                     // Read the files
-                    foreach (String file in openFileDialog.FileNames)
+                    foreach (String curFullFilePath in openFileDialog.FileNames)
                     {
+                        string onlyPath = Path.GetDirectoryName(curFullFilePath);
+                        string onlyFileName = Path.GetFileName(curFullFilePath);
+
+                        string caption = string.Empty;
+                        string message = string.Empty;
+
+                        // Check Dictionary for existing entry
+                        if (CCToolSession.curToolFiles.TryGetValue(curFullFilePath, out NCToolFile chkToolFile))
+                        {
+                            // If so, option to Replace or Skip
+                            caption = curFullFilePath + " already open";
+                            message = "Select Yes to Reload file";
+                            var result = MessageBox.Show(message, caption, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                            if (result == DialogResult.No)
+                            {
+                                // Skip this file
+                                errorCount++;
+                                continue;
+                            }
+                            else
+                            {
+                                // Remove this file from the Session dictionary and the Tab
+                                CCToolSession.curToolFiles.Remove(curFullFilePath);
+                                tabControlCCToolLib.TabPages.RemoveByKey(curFullFilePath);
+                            }
+
+                        }
+
+
 
                         // Create a Tool dictionary.
                         try
                         {
+                            string errMsgStr = string.Empty;
                             _360LibraryConverter.F360ToolLibrary nextF360ToolLibrary = null;
-                            bool successFlag = CCtoolFileHandling.JsonInputFiles(file, out nextF360ToolLibrary);
-                            if (successFlag)
+                            nextF360Token = null;
+
+                            bSuccess = ToolFileHandling.JsonInputFiles(curFullFilePath, out nextF360ToolLibrary, out nextF360Token);
+                            if (bSuccess == true)
                             {
-                                // Add to Document Json collection
-                                CCToolSession.curF360Files.Add(file, nextF360ToolLibrary);
-                                // Make it the current F360 Json
-                                CCToolSession.curF360File = nextF360ToolLibrary;
-                                // Report statistics
-                                // Build GUI data
+                                // Add F360 library to wrapper
+                                NCToolFile nextCCToolFile = new NCToolFile();
+
+                                nextCCToolFile.FullFilePath = curFullFilePath;
+                                nextCCToolFile.F360Tools = nextF360ToolLibrary;
+
+                                // Use the CC File name for Material and Machine
+                                tabControlCCToolLib.TabPages.Add(curFullFilePath, nextCCToolFile.FileName);
+
+                                // Select the new tabpage
+                                curTabPage = tabControlCCToolLib.TabPages[tabControlCCToolLib.TabPages.Count - 1];
+                                // use full path in name for key search
+                                //curTabPage.Text = nextCCToolFile.FileName;
+                                //curTabPage.Font = this.ccToolTextFontBold;
+
+                                // Double point the File and Tabpage
+                                curTabPage.Tag = nextCCToolFile;
+                                nextCCToolFile.FileTabPage = curTabPage;
+
+                                // use the file path as the document key
+                                CCToolSession.curToolFiles.Add(nextCCToolFile.FullFilePath, nextCCToolFile);
+                                CCToolSession.curToolFile = nextCCToolFile;
+                                bAnySuccess = true;
+                                successCount++;
+
+                                // Save Path for future use
+                                Properties.Settings.Default.LastJsonPath = onlyPath;
+
+
                             }
                             else
                             {
                                 // Clean up
+                                caption = curFullFilePath + " error";
+                                message = errMsgStr + "\n\nSelect Ok to Cancel";
+                                var result = MessageBox.Show(message, caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                if (result == DialogResult.OK)
+                                {
+                                    // Skip this file
+                                    errorCount++;
+                                    continue;
+                                }
 
                             }
                         }
@@ -441,18 +512,76 @@ namespace CCToolLibraryConvert
                             MessageBox.Show("Security error. Please contact your administrator for details.\n\n" +
                                 "Error message: " + ex.Message + "\n\n" +
                                 "Details (send to Support):\n\n" + ex.StackTrace
+
                             );
+                            errorCount++;
+
                         }
                         catch (Exception ex)
                         {
                             // Could not load the image - probably related to Windows file system permissions.
-                            MessageBox.Show("Cannot open JSON file " + file.Substring(file.LastIndexOf('\\'))
+                            MessageBox.Show("Cannot open JSON file " + curFullFilePath.Substring(curFullFilePath.LastIndexOf('\\'))
                                 + ". You may not have permission to read the file, or " +
                                 "it may be corrupt.\n\nReported error: " + ex.Message);
+                            errorCount++;
+
                         }
+
+
                     }
+                    // Update GUI
+                    if (bAnySuccess == true)
+                    {
+                        this.tabControlCCToolLib.SelectTab(CCToolSession.curToolFile.FileTabPage);
+
+                        // Remove possible ListView
+                        // Remove possible TreeView
+                        this.listViewCCToolLibrary.Parent = null;
+                        this.treeViewF360Json.Parent = null;
+
+                        CCToolSession.VendorEnum newVendor = CCToolSession.VendorEnum.F360;
+
+                        switch (newVendor)
+                        {
+                            case CCToolSession.VendorEnum.CarbideCreate:
+                                {
+                                    curTabPage.Controls.Add(this.listViewCCToolLibrary);
+                                    this.listViewCCToolLibrary.Dock = DockStyle.Fill;
+                                    updateCCToolLibraryListView(ref CCToolSession.curToolFile);
+                                    break;
+                                }
+                            case CCToolSession.VendorEnum.F360:
+                                {
+                                    curTabPage.Controls.Add(this.treeViewF360Json);
+                                    this.treeViewF360Json.Dock = DockStyle.Fill;
+                                    updateF360JsonTreeView(nextF360Token, CCToolSession.curToolFile.FileName, ref this.treeViewF360Json);
+//                                    updateCCToolLibraryListView(ref CCToolSession.curToolFile);
+                                    break;
+                                }
+                        }
+
+                        if (this.bFirstTabPage == true)
+                        {
+                            CCToolSession.curToolFile.FileTabPage.Font = ccToolTextFontBold;
+                            this.bFirstTabPage = false;
+                        }
+
+
+                        // Build GUI data
+                        this.ToolStripMenuItemSave.Enabled = true;
+                        this.ToolStripMenuItemClose.Enabled = true;
+
+                    }
+
+
                 }
+
+
+
+
             }
+            statusMessage = "Successfully opened " + successCount + " file(s) and Errors with " + errorCount + " file(s)";
+            updateStatusStrip(this.listViewCCToolLibrary.SelectedItems.Count, statusMessage);
 
         }
         private void Savef360ToolLibJSONToolStripMenuItem_Click(object sender, EventArgs e)
@@ -479,7 +608,7 @@ namespace CCToolLibraryConvert
                     {
                         _360LibraryConverter.F360ToolLibrary f360ToolLibrary = CCToolSession.curF360File;
                         tempStr = saveFileDialog.FileName;
-                        bool successFlag = CCtoolFileHandling.JsonOutputFiles(f360ToolLibrary, tempStr);
+                        bool successFlag = ToolFileHandling.JsonOutputFiles(f360ToolLibrary, tempStr);
                         if (successFlag)
                         {
                             // Report statistics
@@ -546,7 +675,7 @@ namespace CCToolLibraryConvert
                         string message = string.Empty;
 
                         // Check Dictionary for existing entry
-                        if (CCToolSession.curToolFiles.TryGetValue(curFullFilePath, out CCToolFile chkToolFile))
+                        if (CCToolSession.curToolFiles.TryGetValue(curFullFilePath, out NCToolFile chkToolFile))
                         {
                             // If so, option to Replace or Skip
                             caption = curFullFilePath + " already open";
@@ -574,10 +703,11 @@ namespace CCToolLibraryConvert
                         // Create a Tool dictionary.
                         try
                         {
-                            CCToolFile nextCCToolFile = new CCToolFile();
+                            NCToolFile nextCCToolFile = new NCToolFile();
+                            nextCCToolFile.VendorSystem = CCToolSession.VendorEnum.CarbideCreate.ToString();
                             string errMsgStr = string.Empty;
 
-                            bSuccess = CCtoolFileHandling.ReadCCToolCSVFile(curFullFilePath, out nextCCToolFile, out errMsgStr);
+                            bSuccess = ToolFileHandling.ReadCCToolCSVFile(curFullFilePath, out nextCCToolFile, out errMsgStr);
                             if (bSuccess == true)
                             {
                                 // Use the CC File name for Material and Machine
@@ -767,7 +897,7 @@ namespace CCToolLibraryConvert
             newCCTool.ToolIndex = CCToolSession.curToolFile.ToolIndex.ToString();
 
             // Add to curToolFile
-            CCToolSession.curToolFile.Tools.Add(newCCTool.ToolIndex, newCCTool);
+            CCToolSession.curToolFile.CCTools.Add(newCCTool.ToolIndex, newCCTool);
 
             updateCCToolLibraryListView(ref CCToolSession.curToolFile);
 
@@ -801,7 +931,7 @@ namespace CCToolLibraryConvert
                 }
 
                 // Clear clipboard
-                CCToolSession.clipBoardToolFile.Tools.Clear();
+                CCToolSession.clipBoardToolFile.CCTools.Clear();
 
                 // Copy CCToolCSV instances from parent collection
                 for (int i = 0; i < selCount; i++)
@@ -809,7 +939,7 @@ namespace CCToolLibraryConvert
                     // Create a shallow copy of instance and add copy to the clipboard
                     CCToolCSV newCCToolCSV = (CCToolCSV)selCCToolCSV[i].ShallowCopy();
                     CCToolSession.clipBoardToolFile.ToolIndex++;
-                    CCToolSession.clipBoardToolFile.Tools.Add(CCToolSession.clipBoardToolFile.ToolIndex.ToString(), newCCToolCSV);
+                    CCToolSession.clipBoardToolFile.CCTools.Add(CCToolSession.clipBoardToolFile.ToolIndex.ToString(), newCCToolCSV);
 
                 }
 
@@ -848,7 +978,7 @@ namespace CCToolLibraryConvert
                 }
 
                 // Clear clipboard
-                CCToolSession.clipBoardToolFile.Tools.Clear();
+                CCToolSession.clipBoardToolFile.CCTools.Clear();
 
                 // Copy CCToolCSV instances from parent collection
                 for (int i = 0; i < selCount; i++)
@@ -857,10 +987,10 @@ namespace CCToolLibraryConvert
                     CCToolCSV newCCToolCSV = (CCToolCSV)selCCToolCSV[i].ShallowCopy();
                     CCToolSession.clipBoardToolFile.ToolIndex++;
 
-                    CCToolSession.clipBoardToolFile.Tools.Add(CCToolSession.clipBoardToolFile.ToolIndex.ToString(), newCCToolCSV);
+                    CCToolSession.clipBoardToolFile.CCTools.Add(CCToolSession.clipBoardToolFile.ToolIndex.ToString(), newCCToolCSV);
 
                     // Remove the instance from the Session current file
-                    CCToolSession.curToolFile.Tools.Remove(selCCToolCSV[i].ToolIndex);
+                    CCToolSession.curToolFile.CCTools.Remove(selCCToolCSV[i].ToolIndex);
                 }
 
                 updateCCToolLibraryListView(ref CCToolSession.curToolFile);
@@ -889,17 +1019,17 @@ namespace CCToolLibraryConvert
         private void PasteRowsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string statusMessage = string.Empty;
-            int clipCount = CCToolSession.clipBoardToolFile.Tools.Count;
+            int clipCount = CCToolSession.clipBoardToolFile.CCTools.Count;
 
             if (clipCount > 0)
             {
                 // Determine what row you are going to insert new records
                 this.listViewCCToolLibrary.BeginUpdate();
-                foreach (CCToolCSV copyCCToolCSV in CCToolSession.clipBoardToolFile.Tools.Values)
+                foreach (CCToolCSV copyCCToolCSV in CCToolSession.clipBoardToolFile.CCTools.Values)
                 {
                     // Update next Index
                     CCToolSession.curToolFile.ToolIndex++;
-                    CCToolSession.curToolFile.Tools.Add(CCToolSession.curToolFile.ToolIndex.ToString(), copyCCToolCSV);
+                    CCToolSession.curToolFile.CCTools.Add(CCToolSession.curToolFile.ToolIndex.ToString(), copyCCToolCSV);
                 }
                 // Update ListView
                 updateCCToolLibraryListView(ref CCToolSession.curToolFile);
@@ -946,7 +1076,7 @@ namespace CCToolLibraryConvert
                 for (int i = 0; i < selCount; i++)
                 {
                     // Remove the instance from the Session current file
-                    CCToolSession.curToolFile.Tools.Remove(selCCToolCSV[i].ToolIndex);
+                    CCToolSession.curToolFile.CCTools.Remove(selCCToolCSV[i].ToolIndex);
                 }
                 updateCCToolLibraryListView(ref CCToolSession.curToolFile);
                 listViewCCToolLibrary.EndUpdate();
@@ -1188,7 +1318,7 @@ namespace CCToolLibraryConvert
                     string errMsgStr = string.Empty;
 
                     TabPage curTabPage = this.tabControlCCToolLib.TabPages[i];
-                    CCToolFile curToolFile = curTabPage.Tag as CCToolFile;
+                    NCToolFile curToolFile = curTabPage.Tag as NCToolFile;
 
                     if (curToolFile.bAnyChanges == true)
                     {
@@ -1205,7 +1335,7 @@ namespace CCToolLibraryConvert
                         if (result == DialogResult.Yes)
                         {
                             // Try to save file, then remove from current files
-                            bSuccess = CCtoolFileHandling.SaveCCToolFile(curToolFile.FullFilePath, ref CCToolSession.curToolFile, out errMsgStr);
+                            bSuccess = ToolFileHandling.SaveCCToolFile(curToolFile.FullFilePath, ref CCToolSession.curToolFile, out errMsgStr);
 
                         }
                         if (result == DialogResult.No)
@@ -1255,7 +1385,7 @@ namespace CCToolLibraryConvert
                             curTabPage = this.tabControlCCToolLib.SelectedTab;
 
                             // This is to change the Current Tool file in the Session
-                            curToolFile = curTabPage.Tag as CCToolFile;
+                            curToolFile = curTabPage.Tag as NCToolFile;
 
                             // Move ListView to next TabPage
                             this.listViewCCToolLibrary.Parent = null;
@@ -1270,7 +1400,7 @@ namespace CCToolLibraryConvert
 
                             // No Tool files
                             clearAllCCToolFileGUI();
-                            curToolFile = new CCToolFile();
+                            curToolFile = new NCToolFile();
                             statusMessage = statusMessage + "  **** No Tool files in Session ****";
 
                         }
@@ -1292,7 +1422,7 @@ namespace CCToolLibraryConvert
 
             if (CCToolSession.curToolFiles.Count > 0)
             {
-                CCToolSession.curToolFile = (CCToolFile)e.TabPage.Tag;
+                CCToolSession.curToolFile = (NCToolFile)e.TabPage.Tag;
 
                 this.listViewCCToolLibrary.Parent = null;
                 e.TabPage.Controls.Add(this.listViewCCToolLibrary);
@@ -1331,5 +1461,12 @@ namespace CCToolLibraryConvert
         }
         #endregion
 
+        #region TreeView
+        private void treeViewF360Json_AfterSelect(object sender, TreeViewEventArgs e)
+        {
+            // Determine by checking the Text property.  
+            MessageBox.Show(e.Node.Text);
+        }
+        #endregion
     }
 }
